@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Article Summarizer",
+  "description": "Summarize the article on the current browser page from the toolbar.",
+  "version": "0.1.0",
+  "action": {
+    "default_title": "Summarize article",
+    "default_popup": "popup.html"
+  },
+  "options_page": "options.html",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://api.openai.com/*"
+  ]
+}

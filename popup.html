@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Article Summarizer</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="popup-shell">
+      <header class="topbar">
+        <div>
+          <h1>Article Summary</h1>
+          <p id="pageTitle" class="muted">Ready to summarize this page.</p>
+        </div>
+        <button id="settingsButton" class="icon-button" title="Settings" aria-label="Settings">
+          <img src="settings.svg" alt="">
+        </button>
+      </header>
+
+      <section class="controls" aria-label="Summary options">
+        <label for="summaryStyle">Style</label>
+        <select id="summaryStyle">
+          <option value="brief">Brief</option>
+          <option value="detailed">Detailed</option>
+          <option value="bullets">Bullets</option>
+          <option value="eli5">Plain English</option>
+        </select>
+      </section>
+
+      <button id="summarizeButton" class="primary-button">Summarize Page</button>
+      <button id="openSettingsButton" class="secondary-button full-width" hidden>Open Settings</button>
+
+      <section id="status" class="status" role="status" aria-live="polite"></section>
+      <article id="summary" class="summary" hidden></article>
+      <section id="sourceInfo" class="source-info" hidden></section>
+    </main>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
