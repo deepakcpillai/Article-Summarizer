@@ -9,10 +9,10 @@ const sourceInfoEl = document.querySelector("#sourceInfo");
 const pageTitleEl = document.querySelector("#pageTitle");
 
 const STYLE_INSTRUCTIONS = {
-  brief: "Write a concise 4-6 sentence summary.",
-  detailed: "Write a detailed summary with the main argument, context, and important evidence.",
-  bullets: "Write 6-8 clear bullet points covering the most important ideas.",
-  eli5: "Explain the article in plain English for a smart non-expert."
+  brief: "Write a concise 6-9 sentence summary, about 1.5x longer than a short default summary.",
+  detailed: "Write a detailed summary with the main argument, context, important evidence, and useful nuance. Make it about 1.5x longer than a standard detailed summary.",
+  bullets: "Write 9-12 clear bullet points covering the most important ideas, about 1.5x more detail than a short bullet summary.",
+  eli5: "Explain the article in plain English for a smart non-expert, about 1.5x longer than a short plain-English summary."
 };
 
 let currentArticle = null;
@@ -144,6 +144,7 @@ async function summarizeArticle({ apiKey, model, title, url, text, style }) {
       `URL: ${url || "Unknown"}`,
       "",
       STYLE_INSTRUCTIONS[style] || STYLE_INSTRUCTIONS.brief,
+      "Favor substance over padding. Include more useful detail, not repetition.",
       "",
       "Article text:",
       text.slice(0, 45000)
