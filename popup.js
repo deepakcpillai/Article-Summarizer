@@ -1,6 +1,7 @@
 const summarizeButton = document.querySelector("#summarizeButton");
 const settingsButton = document.querySelector("#settingsButton");
 const openSettingsButton = document.querySelector("#openSettingsButton");
+const expandSummaryButton = document.querySelector("#expandSummaryButton");
 const summaryStyle = document.querySelector("#summaryStyle");
 const statusEl = document.querySelector("#status");
 const summaryEl = document.querySelector("#summary");
@@ -14,6 +15,10 @@ const STYLE_INSTRUCTIONS = {
   eli5: "Explain the article in plain English for a smart non-expert."
 };
 
+let currentArticle = null;
+let currentSummary = "";
+let currentTabUrl = "";
+
 settingsButton.addEventListener("click", () => {
   chrome.runtime.openOptionsPage();
 });
@@ -22,12 +27,52 @@ openSettingsButton.addEventListener("click", () => {
   chrome.runtime.openOptionsPage();
 });
 
+expandSummaryButton.addEventListener("click", async () => {
+  if (!currentArticle || !currentSummary) {
+    setStatus("Summarize the page first, then expand it.", true);
+    return;
+  }
+
+  setBusy(true, "expand");
+  setStatus("Expanding summary...");
+
+  try {
+    const settings = await chrome.storage.local.get(["openaiApiKey", "openaiModel"]);
+    if (!settings.openaiApiKey) {
+      openSettingsButton.hidden = false;
+      throw new Error("Add your OpenAI API key in Settings, then come back and expand this summary.");
+    }
+
+    const expandedSummary = await expandSummary({
+      apiKey: settings.openaiApiKey,
+      model: settings.openaiModel || "gpt-5.4-mini",
+      title: currentArticle.title || "",
+      url: currentTabUrl,
+      text: currentArticle.text,
+      summary: currentSummary,
+      targetWordCount: Math.max(countWords(currentSummary) * 2, 120)
+    });
+
+    currentSummary = expandedSummary;
+    summaryEl.textContent = expandedSummary;
+    setStatus(`Expanded to about ${countWords(expandedSummary).toLocaleString()} words.`);
+  } catch (error) {
+    setStatus(error.message || "Something went wrong.", true);
+  } finally {
+    setBusy(false);
+  }
+});
+
 summarizeButton.addEventListener("click", async () => {
   setBusy(true);
   setStatus("Reading the page...");
   openSettingsButton.hidden = true;
+  expandSummaryButton.hidden = true;
   summaryEl.hidden = true;
   sourceInfoEl.hidden = true;
+  currentArticle = null;
+  currentSummary = "";
+  currentTabUrl = "";
 
   try {
     const settings = await chrome.storage.local.get(["openaiApiKey", "openaiModel"]);
@@ -62,8 +107,12 @@ summarizeButton.addEventListener("click", async () => {
       style: summaryStyle.value
     });
 
+    currentArticle = article;
+    currentSummary = summary;
+    currentTabUrl = tab.url || "";
     summaryEl.textContent = summary;
     summaryEl.hidden = false;
+    expandSummaryButton.hidden = false;
     sourceInfoEl.textContent = `Source text: ${article.wordCount.toLocaleString()} words extracted from this page.`;
     sourceInfoEl.hidden = false;
     setStatus("Done.");
@@ -74,9 +123,11 @@ summarizeButton.addEventListener("click", async () => {
   }
 });
 
-function setBusy(isBusy) {
+function setBusy(isBusy, action = "summarize") {
   summarizeButton.disabled = isBusy;
-  summarizeButton.textContent = isBusy ? "Working..." : "Summarize Page";
+  expandSummaryButton.disabled = isBusy;
+  summarizeButton.textContent = isBusy && action === "summarize" ? "Working..." : "Summarize Page";
+  expandSummaryButton.textContent = isBusy && action === "expand" ? "Expanding..." : "Expand Summary 2x";
 }
 
 function setStatus(message, isError = false) {
@@ -85,6 +136,43 @@ function setStatus(message, isError = false) {
 }
 
 async function summarizeArticle({ apiKey, model, title, url, text, style }) {
+  return requestSummary({
+    apiKey,
+    model,
+    prompt: [
+      `Title: ${title || "Untitled"}`,
+      `URL: ${url || "Unknown"}`,
+      "",
+      STYLE_INSTRUCTIONS[style] || STYLE_INSTRUCTIONS.brief,
+      "",
+      "Article text:",
+      text.slice(0, 45000)
+    ].join("\n")
+  });
+}
+
+async function expandSummary({ apiKey, model, title, url, text, summary, targetWordCount }) {
+  return requestSummary({
+    apiKey,
+    model,
+    prompt: [
+      `Title: ${title || "Untitled"}`,
+      `URL: ${url || "Unknown"}`,
+      "",
+      `Expand the existing summary to about ${targetWordCount} words, roughly double its current length.`,
+      "Add useful context, key details, and nuance from the article text.",
+      "Keep the same neutral tone. Do not add facts that are not in the article.",
+      "",
+      "Existing summary:",
+      summary,
+      "",
+      "Article text:",
+      text.slice(0, 45000)
+    ].join("\n")
+  });
+}
+
+async function requestSummary({ apiKey, model, prompt }) {
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: {
@@ -104,15 +192,7 @@ async function summarizeArticle({ apiKey, model, title, url, text, style }) {
           content: [
             {
               type: "input_text",
-              text: [
-                `Title: ${title || "Untitled"}`,
-                `URL: ${url || "Unknown"}`,
-                "",
-                STYLE_INSTRUCTIONS[style] || STYLE_INSTRUCTIONS.brief,
-                "",
-                "Article text:",
-                text.slice(0, 45000)
-              ].join("\n")
+              text: prompt
             }
           ]
         }
@@ -142,6 +222,14 @@ async function summarizeArticle({ apiKey, model, title, url, text, style }) {
   }
 
   return textFromContent;
+}
+
+function countWords(value) {
+  return String(value)
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .length;
 }
 
 function extractArticleText() {
