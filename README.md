@@ -9,7 +9,7 @@ This is a small Chrome/Edge extension that summarizes the article in the active 
 - Sends that text to the OpenAI Responses API.
 - Shows the summary directly in the popup.
 - Lets you choose brief, detailed, bullet, or plain-English summaries.
-- Generates fuller first-pass summaries, then expands a generated summary to roughly double its word count on request.
+- Offers short and long summary buttons, then expands a generated summary to roughly double its word count on request.
 
 ## Load it in Chrome or Edge
 

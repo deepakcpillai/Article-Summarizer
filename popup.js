@@ -1,4 +1,5 @@
-const summarizeButton = document.querySelector("#summarizeButton");
+const shortSummaryButton = document.querySelector("#shortSummaryButton");
+const longSummaryButton = document.querySelector("#longSummaryButton");
 const settingsButton = document.querySelector("#settingsButton");
 const openSettingsButton = document.querySelector("#openSettingsButton");
 const expandSummaryButton = document.querySelector("#expandSummaryButton");
@@ -8,11 +9,19 @@ const summaryEl = document.querySelector("#summary");
 const sourceInfoEl = document.querySelector("#sourceInfo");
 const pageTitleEl = document.querySelector("#pageTitle");
 
-const STYLE_INSTRUCTIONS = {
-  brief: "Write a concise 6-9 sentence summary, about 1.5x longer than a short default summary.",
-  detailed: "Write a detailed summary with the main argument, context, important evidence, and useful nuance. Make it about 1.5x longer than a standard detailed summary.",
-  bullets: "Write 9-12 clear bullet points covering the most important ideas, about 1.5x more detail than a short bullet summary.",
-  eli5: "Explain the article in plain English for a smart non-expert, about 1.5x longer than a short plain-English summary."
+const SUMMARY_LENGTHS = {
+  short: {
+    brief: "Write a concise 4-6 sentence summary.",
+    detailed: "Write a detailed summary with the main argument, context, and important evidence.",
+    bullets: "Write 6-8 clear bullet points covering the most important ideas.",
+    eli5: "Explain the article in plain English for a smart non-expert."
+  },
+  long: {
+    brief: "Write a concise 6-9 sentence summary, about 1.5x longer than a short default summary.",
+    detailed: "Write a detailed summary with the main argument, context, important evidence, and useful nuance. Make it about 1.5x longer than a standard detailed summary.",
+    bullets: "Write 9-12 clear bullet points covering the most important ideas, about 1.5x more detail than a short bullet summary.",
+    eli5: "Explain the article in plain English for a smart non-expert, about 1.5x longer than a short plain-English summary."
+  }
 };
 
 let currentArticle = null;
@@ -63,8 +72,16 @@ expandSummaryButton.addEventListener("click", async () => {
   }
 });
 
-summarizeButton.addEventListener("click", async () => {
-  setBusy(true);
+shortSummaryButton.addEventListener("click", () => {
+  summarizeCurrentPage("short");
+});
+
+longSummaryButton.addEventListener("click", () => {
+  summarizeCurrentPage("long");
+});
+
+async function summarizeCurrentPage(length) {
+  setBusy(true, length);
   setStatus("Reading the page...");
   openSettingsButton.hidden = true;
   expandSummaryButton.hidden = true;
@@ -104,7 +121,8 @@ summarizeButton.addEventListener("click", async () => {
       title: article.title || tab.title || "",
       url: tab.url || "",
       text: article.text,
-      style: summaryStyle.value
+      style: summaryStyle.value,
+      length
     });
 
     currentArticle = article;
@@ -121,12 +139,14 @@ summarizeButton.addEventListener("click", async () => {
   } finally {
     setBusy(false);
   }
-});
+}
 
 function setBusy(isBusy, action = "summarize") {
-  summarizeButton.disabled = isBusy;
+  shortSummaryButton.disabled = isBusy;
+  longSummaryButton.disabled = isBusy;
   expandSummaryButton.disabled = isBusy;
-  summarizeButton.textContent = isBusy && action === "summarize" ? "Working..." : "Summarize Page";
+  shortSummaryButton.textContent = isBusy && action === "short" ? "Working..." : "Short Summary";
+  longSummaryButton.textContent = isBusy && action === "long" ? "Working..." : "Long Summary";
   expandSummaryButton.textContent = isBusy && action === "expand" ? "Expanding..." : "Expand Summary 2x";
 }
 
@@ -135,7 +155,9 @@ function setStatus(message, isError = false) {
   statusEl.classList.toggle("error", isError);
 }
 
-async function summarizeArticle({ apiKey, model, title, url, text, style }) {
+async function summarizeArticle({ apiKey, model, title, url, text, style, length }) {
+  const instructions = SUMMARY_LENGTHS[length] || SUMMARY_LENGTHS.short;
+
   return requestSummary({
     apiKey,
     model,
@@ -143,7 +165,7 @@ async function summarizeArticle({ apiKey, model, title, url, text, style }) {
       `Title: ${title || "Untitled"}`,
       `URL: ${url || "Unknown"}`,
       "",
-      STYLE_INSTRUCTIONS[style] || STYLE_INSTRUCTIONS.brief,
+      instructions[style] || instructions.brief,
       "Favor substance over padding. Include more useful detail, not repetition.",
       "",
       "Article text:",

@@ -149,6 +149,17 @@ input {
   border: 1px solid var(--border);
 }
 
+.summary-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.summary-actions .primary-button,
+.summary-actions .secondary-button {
+  width: 100%;
+}
+
 .full-width {
   width: 100%;
   margin-top: 10px;
